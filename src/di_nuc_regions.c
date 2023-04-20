@@ -117,18 +117,21 @@ struct regions find_regions(const char *seq, int dn_score, char n1, char n2){
       max_score = score;
       max_i = i;
     }
-    if(!score && last_score){ // a region has been defined
-      scan_region(seq, max_score, start_i, max_i, n1, n2, &reg);
-      i = max_i;
+    // if score is 0 and last score is positive then we should define
+    // a region.
+    // We should also do this if we have reached the last residue
+    // and last_score is positive:
+    if((!score || seq[i+1] == 0) && last_score){ // a region has been defined
+      // Note that we need to use max_i+1
+      // because max_i provides the position of the C of the CG.
+      scan_region(seq, max_score, start_i, max_i+1, n1, n2, &reg);
+      i = max_i+1;
       score = last_score = max_score = max_i = start_i = 0;
     }
     // we always want the last score to be equal to the score here
     last_score = score;
     ++i;
   }
-  // we may end in a region;
-  if(score)
-    scan_region(seq, max_score, start_i, max_i, n1, n2, &reg);
   return(reg);
 }
 
@@ -163,9 +166,18 @@ SEXP di_nuc_regions(SEXP seqs_r, SEXP dn_score_r){
   // maybe use setAttrib( R_NamesSymbol ), though that may not work for a matrix
   SEXP ret_data = PROTECT( allocMatrix( INTSXP, reg.nrow, N_STATS ));
   int *ret_ptr = INTEGER(ret_data);
+  // To set columnames I have to create a list of length 2, the second element of which
+  // should contain the columnames
+  SEXP dim_names_r = PROTECT( allocVector(VECSXP, 2) );
+  SET_VECTOR_ELT( dim_names_r, 1, allocVector(STRSXP, N_STATS) );
+  SEXP col_names_r = VECTOR_ELT( dim_names_r, 1 );
+  for(int i=0; i < N_STATS; ++i)
+    SET_STRING_ELT( col_names_r, i, mkChar(col_names[i]) );
+  // colnames is not the same as names, but we can try.
+  setAttrib( ret_data, R_DimNamesSymbol, dim_names_r );
   for(int i=0; i < N_STATS; ++i)
     memcpy( ret_ptr + i * reg.nrow, reg.stats + i * reg.capacity, sizeof(int) * reg.nrow );
   free_regions(&reg);
-  UNPROTECT(1);
+  UNPROTECT(2);
   return(ret_data);
 }
