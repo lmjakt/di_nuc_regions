@@ -11,8 +11,8 @@ diNucRegions <- function(seq, dinuc, score, to.df=FALSE){
     as.data.frame(tmp)
 }
 
-count.nucleotides <- function(seq){
-    seq.n <- utf8ToInt(seq)
+count.nucleotides <- function(seq, to.upper=eval){
+    seq.n <- utf8ToInt(to.upper(seq))
     tbl <- table(seq.n)
     names(tbl) <- strsplit( intToUtf8( as.integer(names(tbl)) ), "" )[[1]]
     tbl
@@ -20,8 +20,8 @@ count.nucleotides <- function(seq){
 
 ## this assumes that the sequences don't actually use
 ## much unicode but are restricted to 8 bit representations
-count.dinucleotides <- function(seq){
-    seq.n <- utf8ToInt(seq)
+count.dinucleotides <- function(seq, to.upper=eval){
+    seq.n <- utf8ToInt(to.upper(seq))
     n <- length(seq.n)
     seq.dn <- bitwOr( bitwShiftL(seq.n[-n], 8), seq.n[-1] )
     tbl <- table(seq.dn)
@@ -35,8 +35,8 @@ count.dinucleotides <- function(seq){
 
 ## we can also count trinucleotides using this
 ## methods
-count.trinucleotides <- function(seq){
-    seq.n <- utf8ToInt(seq)
+count.trinucleotides <- function(seq, to.upper=eval){
+    seq.n <- utf8ToInt(to.upper(seq))
     n <- length(seq.n)
     i <- seq(1, n-2, 3)
     seq.dn <- bitwOr( bitwOr( bitwShiftL(seq.n[i], 16), bitwShiftL(seq.n[i+1], 8)), seq.n[i+2] )
@@ -56,7 +56,9 @@ count.trinucleotides <- function(seq){
 exp.dinuc <- function(n.count){
     s <- sum(n.count)
     n.f <- n.count / s
-    n.f %*% t(n.f)
+    exp <- n.f %*% t(n.f)
+    rownames(exp) <- colnames(exp)
+    exp
 }
 
 ## an inefficient function to read fasta files:
